@@ -9,6 +9,8 @@ from javsp.web.proxyfree import get_proxy_free_url
 from javsp.config import Cfg, CrawlerID
 from javsp.datatype import  MovieInfo
 
+from undetected_chromedriver import Chrome, ChromeOptions
+import time
 
 # 初始化Request实例
 request = Request(use_scraper=True)
@@ -49,12 +51,16 @@ def parse_data(movie: MovieInfo):
     """解析指定番号的影片数据"""
     global base_url
     if not base_url:
-        base_url = init_network_cfg()
+        # base_url = init_network_cfg()
+        base_url = permanent_url;
         logger.debug(f"JavLib网络配置: {base_url}, proxy={request.proxies}")
     url = new_url = f'{base_url}/cn/vl_searchbyid.php?keyword={movie.dvdid}'
-    resp = request.get(url)
-    html = resp2html(resp)
-    if resp.history:
+    # resp = request.get(url)
+    # html = resp2html(resp)
+    html = getUrlContent(url)
+
+    # if resp.history:
+    if False:
         if urlsplit(resp.url).netloc == urlsplit(base_url).netloc:
             # 出现301重定向通常且新老地址netloc相同时，说明搜索到了影片且只有一个结果
             new_url = resp.url
@@ -127,6 +133,30 @@ def parse_data(movie: MovieInfo):
     movie.producer = producer
     movie.genre = genre
     movie.actress = actress
+
+def getUrlContent(url):
+    # 创建ChromeOptions对象，并设置一些选项
+    options = ChromeOptions()
+    # 如果要使用无界面访问，开启此参数，默认有窗口界面
+    # options.add_argument('--headless')
+    # 将窗口最大化
+    options.add_argument('--start-maximized')
+    options.add_argument('--disable-infobars')
+    # 创建Chrome对象，并使用指定的选项启动Chrome浏览器
+    driver = Chrome(options=options)
+    # 如本地driver版本与浏览器版本不一致，使用executable_path 指定driver路径
+    # driver = Chrome(options=options, executable_path='/usr/local/bin/chromedriver')
+    # 访问网站
+    driver.get(url)
+    time.sleep(10)
+    page_source = driver.page_source
+
+    print(page_source)
+
+    driver.refresh()
+    # 关闭Chrome浏览器
+    driver.quit()
+    return page_source
 
 
 if __name__ == "__main__":
