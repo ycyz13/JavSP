@@ -11,7 +11,7 @@ from javsp.datatype import  MovieInfo
 
 from undetected_chromedriver import Chrome, ChromeOptions
 import time
-
+import lxml.html
 # 初始化Request实例
 request = Request(use_scraper=True)
 
@@ -57,19 +57,24 @@ def parse_data(movie: MovieInfo):
     url = new_url = f'{base_url}/cn/vl_searchbyid.php?keyword={movie.dvdid}'
     # resp = request.get(url)
     # html = resp2html(resp)
-    html = getUrlContent(url)
-
+    # resp = request.get("https://www.baidu.com")
+    # html = resp2html(resp)
+    resp, respUrl = getUrlContent(url)
+    print(resp)
+    html = lxml.html.fromstring(resp)
+    html.make_links_absolute(url, resolve_base_href=True)
     # if resp.history:
-    if False:
-        if urlsplit(resp.url).netloc == urlsplit(base_url).netloc:
-            # 出现301重定向通常且新老地址netloc相同时，说明搜索到了影片且只有一个结果
-            new_url = resp.url
-        else:
-            # 重定向到了不同的netloc时，新地址并不是影片地址。这种情况下新地址中丢失了path字段，
-            # 为无效地址（应该是JavBus重定向配置有问题），需要使用新的base_url抓取数据
-            base_url = 'https://' + urlsplit(resp.url).netloc
-            logger.warning(f"请将配置文件中的JavLib免代理地址更新为: {base_url}")
-            return parse_data(movie)
+    if (not html.xpath("//div[@class='video'][@id]/a")):
+        new_url = respUrl
+        # if urlsplit(resp.url).netloc == urlsplit(base_url).netloc:
+        #     # 出现301重定向通常且新老地址netloc相同时，说明搜索到了影片且只有一个结果
+        #     new_url = resp.url
+        # else:
+        #     # 重定向到了不同的netloc时，新地址并不是影片地址。这种情况下新地址中丢失了path字段，
+        #     # 为无效地址（应该是JavBus重定向配置有问题），需要使用新的base_url抓取数据
+        #     base_url = 'https://' + urlsplit(resp.url).netloc
+        #     logger.warning(f"请将配置文件中的JavLib免代理地址更新为: {base_url}")
+        #     return parse_data(movie)
     else:   # 如果有多个搜索结果则不会自动跳转，此时需要程序介入选择搜索结果
         video_tags = html.xpath("//div[@class='video'][@id]/a")
         # 通常第一部影片就是我们要找的，但是以免万一还是遍历所有搜索结果
@@ -148,15 +153,15 @@ def getUrlContent(url):
     # driver = Chrome(options=options, executable_path='/usr/local/bin/chromedriver')
     # 访问网站
     driver.get(url)
-    time.sleep(10)
+    time.sleep(4)
     page_source = driver.page_source
 
-    print(page_source)
 
-    driver.refresh()
-    # 关闭Chrome浏览器
-    driver.quit()
-    return page_source
+    return page_source, driver.current_url
+    # driver.refresh()
+    # # 关闭Chrome浏览器
+    # driver.quit()
+
 
 
 if __name__ == "__main__":
