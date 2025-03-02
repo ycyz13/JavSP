@@ -1,9 +1,11 @@
 import ssl
+import time
+
 from undetected_chromedriver import Chrome, ChromeOptions
 
 
 def test_driver():
-    url = 'https://www.baidu.com'
+    url = 'https://www.javlibrary.com/cn/vl_searchbyid.php?keyword=IPX-177'
     # 测试使用，请求https网站时，禁用SSL证书验证
     ssl._create_default_https_context = ssl._create_unverified_context
     # 创建ChromeOptions对象，并设置一些选项
@@ -19,13 +21,15 @@ def test_driver():
     # driver = Chrome(options=options, executable_path='/usr/local/bin/chromedriver')
     # 访问网站
     driver.get(url)
+    time.sleep(15)
     page_source = driver.page_source
 
     print(page_source)
 
-    driver.refresh()
+
+    # driver.refresh()
     # 关闭Chrome浏览器
-    driver.quit()
+    # driver.quit()
 
 
 if __name__ == '__main__':

@@ -12,13 +12,19 @@ from javsp.datatype import  MovieInfo
 from undetected_chromedriver import Chrome, ChromeOptions
 import time
 import lxml.html
-# 初始化Request实例
-request = Request(use_scraper=True)
 
 logger = logging.getLogger(__name__)
 permanent_url = 'https://www.javlibrary.com'
 base_url = ''
 
+# 初始化Request实例
+request = Request(use_scraper=True)
+
+options = ChromeOptions()
+options.add_argument('--start-maximized')
+options.add_argument('--disable-infobars')
+# 创建Chrome对象，并使用指定的选项启动Chrome浏览器
+driver = Chrome(options=options)
 
 def init_network_cfg():
     """设置合适的代理模式和base_url"""
@@ -55,12 +61,10 @@ def parse_data(movie: MovieInfo):
         base_url = permanent_url;
         logger.debug(f"JavLib网络配置: {base_url}, proxy={request.proxies}")
     url = new_url = f'{base_url}/cn/vl_searchbyid.php?keyword={movie.dvdid}'
-    # resp = request.get(url)
-    # html = resp2html(resp)
-    # resp = request.get("https://www.baidu.com")
-    # html = resp2html(resp)
-    resp, respUrl = getUrlContent(url)
-    print(resp)
+
+    # 访问网站
+    resp, respUrl = getUrlContent(url, movie)
+
     html = lxml.html.fromstring(resp)
     html.make_links_absolute(url, resolve_base_href=True)
     # if resp.history:
@@ -105,7 +109,10 @@ def parse_data(movie: MovieInfo):
             # 存在不同影片但是番号相同的情况，如MIDV-010
             raise MovieDuplicateError(__name__, movie.dvdid, match_count, pre_choose_urls)
         # 重新抓取网页
-        html = request.get_html(new_url)
+        resp1, respUrl1 = getUrlContent(new_url, movie)
+        html = lxml.html.fromstring(resp1)
+        html.make_links_absolute(new_url, resolve_base_href=True)
+
     container = html.xpath("/html/body/div/div[@id='rightcolumn']")[0]
     title_tag = container.xpath("div/h3/a/text()")
     title = title_tag[0]
@@ -139,30 +146,17 @@ def parse_data(movie: MovieInfo):
     movie.genre = genre
     movie.actress = actress
 
-def getUrlContent(url):
-    # 创建ChromeOptions对象，并设置一些选项
-    options = ChromeOptions()
-    # 如果要使用无界面访问，开启此参数，默认有窗口界面
-    # options.add_argument('--headless')
-    # 将窗口最大化
-    options.add_argument('--start-maximized')
-    options.add_argument('--disable-infobars')
-    # 创建Chrome对象，并使用指定的选项启动Chrome浏览器
-    driver = Chrome(options=options)
-    # 如本地driver版本与浏览器版本不一致，使用executable_path 指定driver路径
-    # driver = Chrome(options=options, executable_path='/usr/local/bin/chromedriver')
-    # 访问网站
+def getUrlContent(url, movie):
     driver.get(url)
-    time.sleep(4)
     page_source = driver.page_source
-
+    matchStr = '<td class="text">' + movie.dvdid.upper() + '</td>'
+    matchStr1 = 'title="' + movie.dvdid.upper()
+    time.sleep(3)
+    while matchStr not in page_source and matchStr1 not in page_source:
+        time.sleep(2)
+        page_source = driver.page_source
 
     return page_source, driver.current_url
-    # driver.refresh()
-    # # 关闭Chrome浏览器
-    # driver.quit()
-
-
 
 if __name__ == "__main__":
     import pretty_errors
