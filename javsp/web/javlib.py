@@ -23,6 +23,8 @@ request = Request(use_scraper=True)
 options = ChromeOptions()
 options.add_argument('--start-maximized')
 options.add_argument('--disable-infobars')
+options.add_argument("--remote-debugging-port=9222")  # 指定调试端口
+options.add_argument("--user-data-dir=C:\\Users\\zhaowei\\AppData\\Local\\Google\\Chrome\\User Data")  # 指定用户数据目录
 # 创建Chrome对象，并使用指定的选项启动Chrome浏览器
 driver = Chrome(options=options)
 
